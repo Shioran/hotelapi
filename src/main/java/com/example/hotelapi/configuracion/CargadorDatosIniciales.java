@@ -6,17 +6,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
-import com.example.hotelapi.modelos.Cliente;
 import com.example.hotelapi.modelos.Habitacion;
 import com.example.hotelapi.modelos.Reserva;
 import com.example.hotelapi.modelos.TipoHabitacion;
-import com.example.hotelapi.repositorios.IClienteRepositorio;
+import com.example.hotelapi.modelos.Usuario;
 import com.example.hotelapi.repositorios.IHabitacionRepositorio;
 import com.example.hotelapi.repositorios.IReservaRepositorio;
 import com.example.hotelapi.repositorios.ITipoHabitacionRepositorio;
+import com.example.hotelapi.repositorios.IUsuarioRepositorio;
 
-//Carga datos iniciales al arrancar la aplicacion,
-//asi el CRUD del front ya tiene con que jugar sin capturar nada a mano.
 @Component
 public class CargadorDatosIniciales implements CommandLineRunner {
 
@@ -27,7 +25,7 @@ public class CargadorDatosIniciales implements CommandLineRunner {
     private IHabitacionRepositorio habitacionRepositorio;
 
     @Autowired
-    private IClienteRepositorio clienteRepositorio;
+    private IUsuarioRepositorio usuarioRepositorio;
 
     @Autowired
     private IReservaRepositorio reservaRepositorio;
@@ -35,9 +33,35 @@ public class CargadorDatosIniciales implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
 
-        if (tipoHabitacionRepositorio.count() > 0) {
+        //si ya hay datos no volvemos a cargar
+        if (usuarioRepositorio.count() > 0) {
             return;
         }
+
+        //usuarios del sistema
+        Usuario admin = new Usuario();
+        admin.setNombre("Juan");
+        admin.setApellido("Gomez");
+        admin.setDocumento("1000000001");
+        admin.setEmail("admin@hotel.com");
+        admin.setTelefono("3001234567");
+        admin.setUsername("admin");
+        admin.setPassword("admin123");
+        admin.setRol("ADMIN");
+        admin.setEstado("activo");
+        usuarioRepositorio.save(admin);
+
+        Usuario cliente = new Usuario();
+        cliente.setNombre("Maria");
+        cliente.setApellido("Lopez");
+        cliente.setDocumento("1000000002");
+        cliente.setEmail("maria@email.com");
+        cliente.setTelefono("3109876543");
+        cliente.setUsername("cliente");
+        cliente.setPassword("cliente123");
+        cliente.setRol("CLIENTE");
+        cliente.setEstado("activo");
+        usuarioRepositorio.save(cliente);
 
         //tipos de habitacion
         TipoHabitacion sencilla = new TipoHabitacion();
@@ -61,79 +85,56 @@ public class CargadorDatosIniciales implements CommandLineRunner {
         suite.setCapacidad(3);
         tipoHabitacionRepositorio.save(suite);
 
-        //habitaciones
-        Habitacion h101 = new Habitacion();
-        h101.setNumero("101");
-        h101.setPiso(1);
-        h101.setEstado("disponible");
-        h101.setTipoHabitacionId(sencilla.getId());
-        habitacionRepositorio.save(h101);
+        //40 habitaciones: 4 pisos x 10 habitaciones
+        String[] estados = {
+                "disponible", "disponible", "disponible", "disponible",
+                "disponible", "disponible", "disponible", "disponible",
+                "ocupada", "mantenimiento"
+        };
 
-        Habitacion h102 = new Habitacion();
-        h102.setNumero("102");
-        h102.setPiso(1);
-        h102.setEstado("disponible");
-        h102.setTipoHabitacionId(doble.getId());
-        habitacionRepositorio.save(h102);
+        TipoHabitacion[] tipos = {
+                sencilla, sencilla, doble, doble, doble,
+                doble, suite, suite, sencilla, doble
+        };
 
-        Habitacion h201 = new Habitacion();
-        h201.setNumero("201");
-        h201.setPiso(2);
-        h201.setEstado("mantenimiento");
-        h201.setTipoHabitacionId(suite.getId());
-        habitacionRepositorio.save(h201);
+        for (int piso = 1; piso <= 4; piso++) {
+            for (int num = 1; num <= 10; num++) {
+                Habitacion h = new Habitacion();
+                h.setNumero(piso + "" + String.format("%02d", num));
+                h.setPiso(piso);
+                h.setEstado(estados[num - 1]);
+                h.setTipoHabitacionId(tipos[num - 1].getId());
+                habitacionRepositorio.save(h);
+            }
+        }
 
-        Habitacion h202 = new Habitacion();
-        h202.setNumero("202");
-        h202.setPiso(2);
-        h202.setEstado("disponible");
-        h202.setTipoHabitacionId(doble.getId());
-        habitacionRepositorio.save(h202);
+        //reservas de ejemplo
+        Habitacion hab101 = habitacionRepositorio.findAll().get(0);
+        Habitacion hab102 = habitacionRepositorio.findAll().get(1);
 
-        //clientes
-        Cliente cliente1 = new Cliente();
-        cliente1.setNombre("Carlos");
-        cliente1.setApellido("Ramirez");
-        cliente1.setDocumento("1234567890");
-        cliente1.setEmail("carlos.ramirez@email.com");
-        cliente1.setTelefono("3101234567");
-        clienteRepositorio.save(cliente1);
-
-        Cliente cliente2 = new Cliente();
-        cliente2.setNombre("Maria");
-        cliente2.setApellido("Lopez");
-        cliente2.setDocumento("0987654321");
-        cliente2.setEmail("maria.lopez@email.com");
-        cliente2.setTelefono("3209876543");
-        clienteRepositorio.save(cliente2);
-
-        //reservas
         Reserva reserva1 = new Reserva();
-        reserva1.setFechaEntrada(LocalDate.of(2026, 5, 10));
-        reserva1.setFechaSalida(LocalDate.of(2026, 5, 13));
+        reserva1.setFechaEntrada(LocalDate.of(2026, 5, 20));
+        reserva1.setFechaSalida(LocalDate.of(2026, 5, 23));
         reserva1.setPrecioTotal(450000.0);
         reserva1.setEstado("confirmada");
-        reserva1.setClienteId(cliente1.getId());
-        reserva1.setHabitacionId(h101.getId());
-        reservaRepositorio.save(reserva1);
+        reserva1.setClienteId(cliente.getId());
+        reserva1.setHabitacionId(hab101.getId());
+        reserva1.setNumeroNoches(3);
+        Reserva r1guardada = reservaRepositorio.save(reserva1);
+        r1guardada.setCodigoReserva("RES-2026-" + String.format("%03d", r1guardada.getId()));
+        reservaRepositorio.save(r1guardada);
 
         Reserva reserva2 = new Reserva();
-        reserva2.setFechaEntrada(LocalDate.of(2026, 5, 15));
-        reserva2.setFechaSalida(LocalDate.of(2026, 5, 18));
-        reserva2.setPrecioTotal(750000.0);
+        reserva2.setFechaEntrada(LocalDate.of(2026, 6, 1));
+        reserva2.setFechaSalida(LocalDate.of(2026, 6, 5));
+        reserva2.setPrecioTotal(1000000.0);
         reserva2.setEstado("confirmada");
-        reserva2.setClienteId(cliente2.getId());
-        reserva2.setHabitacionId(h102.getId());
-        reservaRepositorio.save(reserva2);
-
-        Reserva reserva3 = new Reserva();
-        reserva3.setFechaEntrada(LocalDate.of(2026, 6, 1));
-        reserva3.setFechaSalida(LocalDate.of(2026, 6, 5));
-        reserva3.setPrecioTotal(1000000.0);
-        reserva3.setEstado("cancelada");
-        reserva3.setClienteId(cliente1.getId());
-        reserva3.setHabitacionId(h202.getId());
-        reservaRepositorio.save(reserva3);
+        reserva2.setClienteId(admin.getId());
+        reserva2.setHabitacionId(hab102.getId());
+        reserva2.setNumeroNoches(4);
+        Reserva r2guardada = reservaRepositorio.save(reserva2);
+        r2guardada.setCodigoReserva("RES-2026-" + String.format("%03d", r2guardada.getId()));
+        reservaRepositorio.save(r2guardada);
 
         System.out.println(">>> Datos iniciales de hotelapi cargados correctamente");
     }
