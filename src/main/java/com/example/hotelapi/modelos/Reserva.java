@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Column;
 
 @Entity
 @Table(name = "reservas")
@@ -32,6 +33,13 @@ public class Reserva {
     //id de la habitacion reservada
     private Integer habitacionId;
 
+    //codigo unico de la reserva, ejemplo: RES-2026-001
+    @Column(unique = true)
+    private String codigoReserva;
+
+    //numero de noches de la estadia
+    private Integer numeroNoches;
+
     public Reserva() {
     }
 
@@ -55,5 +63,11 @@ public class Reserva {
 
     public Integer getHabitacionId() { return habitacionId; }
     public void setHabitacionId(Integer habitacionId) { this.habitacionId = habitacionId; }
+
+    public String getCodigoReserva() { return codigoReserva; }
+    public void setCodigoReserva(String codigoReserva) { this.codigoReserva = codigoReserva; }
+
+    public Integer getNumeroNoches() { return numeroNoches; }
+    public void setNumeroNoches(Integer numeroNoches) { this.numeroNoches = numeroNoches; }
 
 }

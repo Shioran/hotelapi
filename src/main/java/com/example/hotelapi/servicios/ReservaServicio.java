@@ -12,11 +12,18 @@ import org.springframework.web.server.ResponseStatusException;
 import com.example.hotelapi.modelos.Reserva;
 import com.example.hotelapi.repositorios.IReservaRepositorio;
 
+import com.example.hotelapi.servicios.HistorialReservaServicio;
+import java.time.format.DateTimeFormatter;
+import java.time.LocalDate;
+
 @Service
 public class ReservaServicio {
 
     @Autowired
     private IReservaRepositorio repositorio;
+
+    @Autowired
+    private HistorialReservaServicio historialServicio;
 
     public Reserva guardar(Reserva datos) {
         if (datos.getFechaEntrada() == null) {
@@ -37,8 +44,26 @@ public class ReservaServicio {
         if (datos.getEstado() == null || datos.getEstado().isBlank()) {
             datos.setEstado("pendiente");
         }
+
+        //calcular numero de noches
+        long noches = datos.getFechaEntrada().until(datos.getFechaSalida(), java.time.temporal.ChronoUnit.DAYS);
+        datos.setNumeroNoches((int) noches);
+
         datos.setEstado(datos.getEstado().trim().toLowerCase());
-        return repositorio.save(datos);
+        Reserva guardada = repositorio.save(datos);
+
+        //generar codigo unico: RES-AÑO-ID (ejemplo: RES-2026-001)
+        String codigo = "RES-" + LocalDate.now().getYear() + "-" + String.format("%03d", guardada.getId());
+        guardada.setCodigoReserva(codigo);
+        guardada = repositorio.save(guardada);
+
+        //registrar en historial
+        historialServicio.registrar(codigo, "CREADA",
+                "Reserva creada para cliente id " + datos.getClienteId() +
+                        ", habitacion id " + datos.getHabitacionId(), null);
+
+        return guardada;
+    }
     }
 
     public List<Reserva> listarTodas() {
@@ -76,9 +101,11 @@ public class ReservaServicio {
         return repositorio.save(actual);
     }
 
-    public void eliminar(Integer id) {
-        Reserva actual = buscarPorId(id);
-        repositorio.delete(actual);
-    }
+public void eliminar(Integer id) {
+    Reserva actual = buscarPorId(id);
+    historialServicio.registrar(actual.getCodigoReserva(), "ELIMINADA",
+            "Reserva eliminada", null);
+    repositorio.delete(actual);
+}
 
 }
